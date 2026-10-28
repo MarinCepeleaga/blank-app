@@ -51,7 +51,7 @@ public final class MainActivity extends Activity {
 
         TextView title = label("Reels Guard", 34, true);
         column.addView(title);
-        column.addView(label("Keep Instagram DMs, Stories and regular posts. This app tries to leave Reels automatically.",16,false));
+        column.addView(label("Keep Instagram DMs, Stories and regular posts. This app attempts to leave Reels automatically without repeatedly closing Instagram.",16,false));
         status = label("Checking settings...", 18, true);
         status.setPadding(0,dp(26),0,dp(14));
         column.addView(status);
@@ -75,8 +75,8 @@ public final class MainActivity extends Activity {
 
         counter = label("0 Reels exit attempts",18,true);
         column.addView(counter);
-        column.addView(label("How it works: Android Accessibility checks only Instagram and presses Back if it detects a Reel. No Instagram content is stored or sent online.",14,false));
-        column.addView(label("Experimental: some Reels may slip through, and some non-Reels screens may be closed by mistake. You can turn it off whenever you want.",14,false));
+        column.addView(label("How it works: Android Accessibility checks only Instagram and tries to open Home after detecting Reels. It presses Back at most once per entry if Home is unavailable. No Instagram content is stored or sent online.",14,false));
+        column.addView(label("Experimental: some Reels may slip through, and certain Instagram screens may be redirected by mistake. You can turn it off whenever you want.",14,false));
     }
 
     @Override public void onResume() { super.onResume(); refresh(); }
