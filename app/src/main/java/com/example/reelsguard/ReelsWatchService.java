@@ -32,7 +32,7 @@ public final class ReelsWatchService extends AccessibilityService {
     private final Runnable rearmAfterSafeScreen = () -> {
         if (!isEnabled()) return;
         AccessibilityNodeInfo root = instagramRoot();
-        if (root != null && isDefinitelySafeScreen(root)) entryHandled = false;
+        if (root != null && !isReelsViewer(root) && isDefinitelySafeScreen(root)) entryHandled = false;
     };
 
     private boolean isEnabled() {
@@ -82,7 +82,7 @@ public final class ReelsWatchService extends AccessibilityService {
         if (entryHandled) {
             // Once we have escaped, ONLY a recognizably non-Reels screen can
             // re-arm the blocker. A temporary change in Reel controls cannot.
-            if (isDefinitelySafeScreen(root)) {
+            if (!isReelsViewer(root) && isDefinitelySafeScreen(root)) {
                 handler.removeCallbacks(rearmAfterSafeScreen);
                 handler.postDelayed(rearmAfterSafeScreen, 1900L);
             }
