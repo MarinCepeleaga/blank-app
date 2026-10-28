@@ -1,19 +1,6 @@
-# 🎈 Blank app template
+# Reels Guard
+Android app to attempt to leave Instagram Reels using Android Accessibility. Built as a debug APK by GitHub Actions. No Internet permission.
 
-A simple Streamlit app template for you to modify!
+Open app, turn on Block Reels, enable Reels Guard blocker in Android Accessibility settings. Android 13+ may require selecting **Allow restricted settings** from App info's three-dot menu before enabling an APK installed outside the Play Store.
 
-[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://blank-app-template.streamlit.app/)
-
-### How to run it on your own machine
-
-1. Install the requirements
-
-   ```
-   $ pip install -r requirements.txt
-   ```
-
-2. Run the app
-
-   ```
-   $ streamlit run streamlit_app.py
-   ```
+Instagram's UI changes; blocking is best-effort and may miss Reels or leave other screens unexpectedly. Only installs if you grant Accessibility permissions; stop by toggling off or uninstalling.

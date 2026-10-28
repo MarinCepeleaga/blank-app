@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Reels Guard</string>
+    <string name="service_name">Reels Guard blocker</string>
+    <string name="service_description">Checks only the Instagram interface for Reels and attempts to go back. No Internet permission; no Instagram content is saved.</string>
+</resources>
