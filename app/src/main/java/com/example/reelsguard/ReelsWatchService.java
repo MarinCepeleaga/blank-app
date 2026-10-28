@@ -112,8 +112,11 @@ public final class ReelsWatchService extends AccessibilityService {
     @Override public void onAccessibilityEvent(AccessibilityEvent event) {
         if (event == null || event.getPackageName() == null) return;
         if (!INSTAGRAM.contentEquals(event.getPackageName())) {
-            // Never allow an overlay to block other apps, lock screens or Settings.
-            if(exploreShield!=null) exploreShield.hide();
+            // Ignore our own overlay's events. Only a genuine foreground app
+            // switch should hide the touch shield.
+            if(event.getEventType()==AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED &&
+                    !getPackageName().contentEquals(event.getPackageName()) &&
+                    exploreShield!=null) exploreShield.hide();
             return;
         }
         if (!isEnabled()) {
