@@ -28,6 +28,60 @@ public final class ReelsWatchService extends AccessibilityService {
     private long exploreOpenedAt = 0L;
     private static final long EXPLORE_GRACE_MS = 650L;
 
+    // v1.3: intercept touches before Instagram scrolls, preserving taps and
+    // horizontal gestures with accessibility gesture replay.
+    private ExploreShield exploreShield;
+    private boolean commentsOpen = false;
+    private boolean commentsPanelConfirmed = false;
+    private long commentsTapAt = 0L;
+    private long commentsPanelLastSeen = 0L;
+
+    private ExploreShield shield() {
+        if(exploreShield == null) {
+            exploreShield = new ExploreShield(this, new ExploreShield.Host() {
+                @Override public boolean shouldShield() {
+                    if(!isEnabled() || !getSharedPreferences(MainActivity.PREFS,MODE_PRIVATE)
+                            .getBoolean(MainActivity.KEY_EXPLORE,true) ||
+                            !explorePostOpen || commentsOpen || entryHandled) return false;
+                    AccessibilityNodeInfo root=instagramRoot();
+                    return root!=null && !isExploreGrid(root) &&
+                            SystemClock.uptimeMillis()-exploreOpenedAt>250L;
+                }
+                @Override public void onVerticalSwipe() {
+                    if(explorePostOpen && !commentsOpen) exitExploreViewerOnce();
+                }
+                @Override public void onShieldTap(float x,float y) {
+                    AccessibilityNodeInfo root=instagramRoot();
+                    if(root!=null && isCommentTarget(root,x,y)) pauseForComments();
+                }
+            });
+        }
+        return exploreShield;
+    }
+
+    private void pauseForComments() {
+        commentsOpen = true;
+        commentsPanelConfirmed = false;
+        commentsTapAt = SystemClock.uptimeMillis();
+        commentsPanelLastSeen = commentsTapAt;
+        if(exploreShield!=null) exploreShield.hide();
+    }
+
+    private void updateComments(AccessibilityNodeInfo root, long now) {
+        if(!commentsOpen) return;
+        if(isCommentsSheet(root)) {
+            commentsPanelConfirmed=true;
+            commentsPanelLastSeen=now;
+            return;
+        }
+        // Allow for the loading animation, then re-enable when the sheet closes.
+        if((commentsPanelConfirmed && now-commentsPanelLastSeen>1150L) ||
+                (!commentsPanelConfirmed && now-commentsTapAt>3300L)) {
+            commentsOpen=false;
+            commentsPanelConfirmed=false;
+        }
+    }
+
 
     private final Runnable afterTabTap = () -> {
         if (!pendingTabTap) return;
@@ -56,8 +110,12 @@ public final class ReelsWatchService extends AccessibilityService {
     }
 
     @Override public void onAccessibilityEvent(AccessibilityEvent event) {
-        if (event == null || event.getPackageName() == null ||
-                !INSTAGRAM.contentEquals(event.getPackageName())) return;
+        if (event == null || event.getPackageName() == null) return;
+        if (!INSTAGRAM.contentEquals(event.getPackageName())) {
+            // Never allow an overlay to block other apps, lock screens or Settings.
+            if(exploreShield!=null) exploreShield.hide();
+            return;
+        }
         if (!isEnabled()) {
             clearExploreGuard();
             exploreSection = false;
@@ -93,6 +151,10 @@ public final class ReelsWatchService extends AccessibilityService {
                 }
                 return;
             }
+            if (explorePostOpen && isCommentsButtonClick(tapped)) {
+                pauseForComments();
+                return;
+            }
             if (getSharedPreferences(MainActivity.PREFS, MODE_PRIVATE)
                     .getBoolean(MainActivity.KEY_EXPLORE, true) &&
                     (exploreSection || isExploreTabSelected(instagramRoot())) &&
@@ -106,6 +168,10 @@ public final class ReelsWatchService extends AccessibilityService {
                 handler.removeCallbacks(afterTabTap);
                 pendingTabTap = false;
                 entryHandled = false;
+                // Open the original tile first, then activate the scroll shield.
+                handler.postDelayed(() -> {
+                    if(explorePostOpen && isEnabled() && instagramRoot()!=null) shield().show();
+                },560L);
             }
             return;
         }
@@ -137,11 +203,15 @@ public final class ReelsWatchService extends AccessibilityService {
                 // The original post was closed manually; the grid is safe again.
                 clearExploreGuard();
             } else {
-                if (now - exploreOpenedAt > 360L && !isExploreGrid(root)) {
+                if (now - exploreOpenedAt > 360L && !isExploreGrid(root))
                     exploreViewerSeen = true;
-                }
-                // Preserve the initially selected post, even if it is a video.
-                // Don't let the older Reel detector close it before a swipe.
+                updateComments(root,now);
+                if(explorePostOpen && !commentsOpen &&
+                        getSharedPreferences(MainActivity.PREFS,MODE_PRIVATE)
+                                .getBoolean(MainActivity.KEY_EXPLORE,true))
+                    shield().show();
+                else if(exploreShield!=null) exploreShield.hide();
+                // Keep original tile visible; don't use generic Reel detector here.
                 if (explorePostOpen) return;
             }
         }
@@ -174,6 +244,9 @@ public final class ReelsWatchService extends AccessibilityService {
     }
 
     private void clearExploreGuard() {
+        if(exploreShield!=null) exploreShield.hide();
+        commentsOpen=false;
+        commentsPanelConfirmed=false;
         explorePostOpen = false;
         exploreViewerSeen = false;
         exploreOpenedAt = 0L;
@@ -308,6 +381,61 @@ public final class ReelsWatchService extends AccessibilityService {
         }
         handler.removeCallbacks(rearmAfterSafeScreen);
         handler.postDelayed(rearmAfterSafeScreen, 2200L);
+    }
+
+    private boolean isCommentsButtonClick(AccessibilityNodeInfo n) {
+        if(n==null) return false;
+        Rect r=new Rect();
+        n.getBoundsInScreen(r);
+        String v=lower(n.getText())+" "+lower(n.getContentDescription());
+        if(r.centerY()<screenHeight()*.15f || r.width()>screenWidth()*.62f) return false;
+        return v.contains("comment") || v.contains("comentário") ||
+                v.contains("comentario") || v.contains("comentar");
+    }
+
+    private boolean isCommentTarget(AccessibilityNodeInfo root,float x,float y) {
+        ArrayDeque<AccessibilityNodeInfo> todo=new ArrayDeque<>();
+        todo.push(root);
+        int visited=0;
+        while(!todo.isEmpty() && visited++<450) {
+            AccessibilityNodeInfo n=todo.pop();
+            Rect r=new Rect();
+            n.getBoundsInScreen(r);
+            if(r.contains((int)x,(int)y) && isCommentsButtonClick(n)) return true;
+            for(int i=0;i<n.getChildCount();i++) {
+                AccessibilityNodeInfo child=n.getChild(i);
+                if(child!=null) todo.push(child);
+            }
+        }
+        return false;
+    }
+
+    private boolean isCommentsSheet(AccessibilityNodeInfo root) {
+        ArrayDeque<AccessibilityNodeInfo> todo=new ArrayDeque<>();
+        todo.push(root);
+        int seen=0;
+        while(!todo.isEmpty() && seen++<460) {
+            AccessibilityNodeInfo n=todo.pop();
+            Rect r=new Rect();
+            n.getBoundsInScreen(r);
+            String txt=lower(n.getText());
+            String desc=lower(n.getContentDescription());
+            boolean heading=txt.equals("comments") || txt.equals("comentários") ||
+                    txt.equals("comentarios") || desc.equals("comments") ||
+                    desc.equals("comentários");
+            boolean editor=txt.startsWith("add a comment") || txt.startsWith("write a comment") ||
+                    txt.startsWith("adicionar comentário") ||
+                    txt.startsWith("adicionar comentario") ||
+                    txt.startsWith("escreve um comentário");
+            if ((heading && r.centerY()>screenHeight()*.13f &&
+                    r.centerY()<screenHeight()*.83f) ||
+                    (editor && r.centerY()>screenHeight()*.45f)) return true;
+            for(int i=0;i<n.getChildCount();i++) {
+                AccessibilityNodeInfo child=n.getChild(i);
+                if(child!=null) todo.push(child);
+            }
+        }
+        return false;
     }
 
     private boolean isHomeLabel(CharSequence s) {
@@ -446,6 +574,7 @@ public final class ReelsWatchService extends AccessibilityService {
 
     @Override public void onInterrupt() {}
     @Override public void onDestroy() {
+        if(exploreShield!=null) { exploreShield.remove(); exploreShield=null; }
         handler.removeCallbacks(afterTabTap);
         handler.removeCallbacks(rearmAfterSafeScreen);
         super.onDestroy();
