@@ -26,7 +26,7 @@ public final class ReelsWatchService extends AccessibilityService {
     private boolean explorePostOpen = false;
     private boolean exploreViewerSeen = false;
     private long exploreOpenedAt = 0L;
-    private static final long EXPLORE_GRACE_MS = 950L;
+    private static final long EXPLORE_GRACE_MS = 650L;
 
 
     private final Runnable afterTabTap = () -> {
@@ -113,10 +113,13 @@ public final class ReelsWatchService extends AccessibilityService {
         // This event fires when a viewer's vertical list moves. Only respond
         // after an Explore tile was explicitly opened, never while browsing grid.
         if (type == AccessibilityEvent.TYPE_VIEW_SCROLLED) {
-            if (explorePostOpen && exploreViewerSeen &&
-                    SystemClock.uptimeMillis() - exploreOpenedAt > EXPLORE_GRACE_MS &&
+            long openedFor = SystemClock.uptimeMillis() - exploreOpenedAt;
+            if (explorePostOpen && openedFor > EXPLORE_GRACE_MS &&
                     isPostFeedVerticalScroll(event)) {
-                exitExploreViewerOnce();
+                AccessibilityNodeInfo active = instagramRoot();
+                if (exploreViewerSeen || (active != null && !isExploreGrid(active))) {
+                    exitExploreViewerOnce();
+                }
             }
             return;
         }
