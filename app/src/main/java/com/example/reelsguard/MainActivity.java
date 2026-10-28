@@ -23,6 +23,7 @@ public final class MainActivity extends Activity {
     static final String PREFS = "settings";
     static final String KEY_BLOCK = "block";
     static final String KEY_COUNT = "blocked";
+    static final String KEY_EXPLORE = "explore_scroll";
 
     private TextView status;
     private TextView counter;
@@ -72,6 +73,18 @@ public final class MainActivity extends Activity {
             refresh();
         });
         column.addView(toggle);
+
+        Switch exploreToggle = new Switch(this);
+        exploreToggle.setText("Stop scrolling into more Explore posts");
+        exploreToggle.setTextSize(17);
+        exploreToggle.setPadding(0,dp(12),0,dp(14));
+        exploreToggle.setChecked(getSharedPreferences(PREFS,MODE_PRIVATE)
+                .getBoolean(KEY_EXPLORE,true));
+        exploreToggle.setOnCheckedChangeListener((CompoundButton button, boolean checked) ->
+                getSharedPreferences(PREFS,MODE_PRIVATE).edit()
+                    .putBoolean(KEY_EXPLORE,checked).apply());
+        column.addView(exploreToggle);
+        column.addView(label("In Explore, open a post normally. Swiping up to the next post should take you back once instead of starting an endless feed. Experimental; detection depends on Instagram's UI.",14,false));
 
         counter = label("0 Reels exit attempts",18,true);
         column.addView(counter);
