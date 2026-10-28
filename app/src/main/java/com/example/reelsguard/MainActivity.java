@@ -75,7 +75,7 @@ public final class MainActivity extends Activity {
         column.addView(toggle);
 
         Switch exploreToggle = new Switch(this);
-        exploreToggle.setText("Stop scrolling into more Explore posts");
+        exploreToggle.setText("Explore touch shield (experimental)");
         exploreToggle.setTextSize(17);
         exploreToggle.setPadding(0,dp(12),0,dp(14));
         exploreToggle.setChecked(getSharedPreferences(PREFS,MODE_PRIVATE)
@@ -84,7 +84,7 @@ public final class MainActivity extends Activity {
                 getSharedPreferences(PREFS,MODE_PRIVATE).edit()
                     .putBoolean(KEY_EXPLORE,checked).apply());
         column.addView(exploreToggle);
-        column.addView(label("In Explore, open a post normally. Swiping up to the next post should take you back once instead of starting an endless feed. Experimental; detection depends on Instagram's UI.",14,false));
+        column.addView(label("Open one post from Explore. The shield tries to block vertical swipes while forwarding taps and horizontal photo swipes. Comments temporarily pause the shield. Experimental: taps or comments might sometimes misbehave.",14,false));
 
         counter = label("0 Reels exit attempts",18,true);
         column.addView(counter);
