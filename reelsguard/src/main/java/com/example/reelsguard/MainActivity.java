@@ -57,7 +57,7 @@ public final class MainActivity extends Activity {
 
         TextView details = text(
                 "How it works\n\n" +
-                "• Reels Guard watches accessibility events from Instagram only.\n" +
+                "• Reels Guard examines Instagram screens only and detects app switches to remove the shield.\n" +
                 "• The Explore shield uses an accessibility overlay. It may occasionally interfere with Instagram interactions; turn it off if that happens.\n" +
                 "• Comments can be scrolled normally once the comments sheet is recognized.\n" +
                 "• The app does not collect, upload or store Instagram content.\n\n" +

@@ -2,5 +2,5 @@
 <resources>
     <string name="app_name">Reels Guard</string>
     <string name="service_name">Reels Guard blocker</string>
-    <string name="service_description">Locally detects Instagram Reels and optionally intercepts vertical gestures in Explore post viewers. No browsing content is saved or transmitted.</string>
+    <string name="service_description">Inspects Instagram screens locally and notices app switches so the Explore shield can be removed. No browsing content is saved or transmitted.</string>
 </resources>

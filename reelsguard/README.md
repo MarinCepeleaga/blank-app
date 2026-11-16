@@ -34,7 +34,7 @@ Output: reelsguard/build/outputs/apk/debug/reelsguard-debug.apk
 
 ## Privacy and scope
 
-The accessibility service is configured only for com.instagram.android. It reads visible accessibility labels locally to identify screens and, if enabled, uses a temporary accessibility overlay to intercept gestures. It requires no INTERNET permission and has no network dependency.
+The accessibility service listens for app switches to remove its temporary overlay. It examines screen content only when the foreground package is com.instagram.android; it does not inspect content from other apps. It reads Instagram accessibility labels locally and, if enabled, uses an accessibility overlay to intercept gestures. It requires no INTERNET permission and has no network dependency.
 
 ## Testing checklist
 
