@@ -16,7 +16,11 @@ public final class ReelsWatchService extends AccessibilityService implements Exp
     private static final long EXIT_COOLDOWN_MS = 1500L;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
-    private final Runnable scanTask = this::scan;
+    private boolean scanScheduled;
+    private final Runnable scanTask = () -> {
+        scanScheduled = false;
+        scan();
+    };
     private SharedPreferences prefs;
     private ExploreShield shield;
     private boolean exploreSection;
@@ -82,9 +86,14 @@ public final class ReelsWatchService extends AccessibilityService implements Exp
             exitExploreViewerOnce();
         }
 
-        handler.removeCallbacks(scanTask);
-        handler.postDelayed(scanTask,
-                type == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ? 65L : SCAN_DELAY_MS);
+        if (type == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+            handler.removeCallbacks(scanTask);
+            scanScheduled = true;
+            handler.postDelayed(scanTask, 65L);
+        } else if (!scanScheduled) {
+            scanScheduled = true;
+            handler.postDelayed(scanTask, SCAN_DELAY_MS);
+        }
     }
 
     private void scan() {
@@ -153,7 +162,12 @@ public final class ReelsWatchService extends AccessibilityService implements Exp
         if (UiAnalyzer.isCommentButtonAt(root, x, y)) {
             commentsPauseUntil = SystemClock.uptimeMillis() + 1900L;
             stopShield();
-            handler.postDelayed(scanTask, 1950L);
+            handler.postDelayed(() -> {
+                if (!scanScheduled) {
+                    scanScheduled = true;
+                    handler.postDelayed(scanTask, 50L);
+                }
+            }, 1950L);
         }
     }
 
@@ -163,6 +177,7 @@ public final class ReelsWatchService extends AccessibilityService implements Exp
 
     private void resetForOtherApp() {
         handler.removeCallbacks(scanTask);
+        scanScheduled = false;
         stopShield();
         exploreSection = false;
         explorePostOpen = false;
